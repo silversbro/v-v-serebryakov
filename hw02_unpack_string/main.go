@@ -2,7 +2,7 @@ package main
 
 import (
 	"errors"
-	"github.com/silversbro/hw02_unpack_string"
+	"unpack"
 )
 
 func main() (string, error) {
@@ -10,7 +10,7 @@ func main() (string, error) {
 	// Исходная строка
 	str := "d\n5abc"
 
-	readyStr, err := hw02_unpack_string.Unpack(str)
+	readyStr, err := unpack.Unpack(str)
 
 	if err != nil {
 		err = errors.New("Error в строке:" + str)

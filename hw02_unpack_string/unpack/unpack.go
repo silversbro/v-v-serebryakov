@@ -1,4 +1,4 @@
-package hw02_unpack_string
+package unpack
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ func Unpack(_ string) (string, error) {
 	// Преобразуем строку в срез рун
 	runes := []rune(str)
 
-	readyString, err := writeString(runes, str)
+	readyString, err := WriteString(runes, str)
 
 	if err != nil {
 		fmt.Println(err, str)
@@ -38,7 +38,7 @@ func WriteString(runes []rune, text string) (string, error) {
 		} else {
 			if i == 0 {
 				return "", errors.New("Некорректная строка:")
-			} else if checkDecimal(string(r), text) {
+			} else if CheckDecimal(string(r), text) {
 				return "", errors.New("Некорректная строка:")
 			} else if num == 0 {
 				builder.WriteString(string(r))
