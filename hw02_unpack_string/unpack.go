@@ -30,10 +30,11 @@ func WriteString(runes []rune, text string) (string, error) {
 	// Распечатаем каждую руну отдельно
 	for i, r := range runes {
 		num, err := strconv.Atoi(string(r))
+
 		if err != nil {
 
 			builder.WriteString(string(r))
-		} else if err == nil {
+		} else {
 			if i == 0 {
 				return "", ErrInvalidString
 			} else if CheckDecimal(string(r), text) {
@@ -62,7 +63,6 @@ func CheckDecimal(num string, text string) bool {
 	checkBuilder.WriteString(num)
 	checkBuilder.WriteString("0")
 	index := strings.Index(text, checkBuilder.String())
-	println(checkBuilder.String())
 
 	if index == -1 {
 		return false
