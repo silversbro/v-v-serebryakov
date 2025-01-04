@@ -30,15 +30,14 @@ func WriteString(runes []rune, text string) (string, error) {
 	// Распечатаем каждую руну отдельно
 	for i, r := range runes {
 		num, err := strconv.Atoi(string(r))
-
 		if err != nil {
-
 			builder.WriteString(string(r))
 		} else {
 			switch {
 			case i == 0:
 				return "", ErrInvalidString
 			case CheckDecimal(string(r), text) == true:
+
 				return "", ErrInvalidString
 			case num == 0:
 				builder.WriteString(string(r))
@@ -50,7 +49,6 @@ func WriteString(runes []rune, text string) (string, error) {
 
 				continue
 			}
-
 			repeated := strings.Repeat(string(runes[i-1]), num-1)
 			builder.WriteString(repeated)
 		}
@@ -65,9 +63,5 @@ func CheckDecimal(num string, text string) bool {
 	checkBuilder.WriteString("0")
 	index := strings.Index(text, checkBuilder.String())
 
-	if index == -1 {
-		return false
-	}
-
-	return true
+	return index == -1
 }
