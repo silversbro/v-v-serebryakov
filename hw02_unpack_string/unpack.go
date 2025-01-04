@@ -1,4 +1,4 @@
-package unpack
+package hw02unpackstring
 
 import (
 	"errors"
@@ -9,9 +9,7 @@ import (
 
 var ErrInvalidString = errors.New("invalid string")
 
-func Unpack(_ string) (string, error) {
-
-	str := "d\n5abc"
+func Unpack(str string) (string, error) {
 
 	// Преобразуем строку в срез рун
 	runes := []rune(str)
@@ -37,9 +35,9 @@ func WriteString(runes []rune, text string) (string, error) {
 			builder.WriteString(string(r))
 		} else {
 			if i == 0 {
-				return "", errors.New("Некорректная строка:")
+				return "", ErrInvalidString
 			} else if CheckDecimal(string(r), text) {
-				return "", errors.New("Некорректная строка:")
+				return "", ErrInvalidString
 			} else if num == 0 {
 				builder.WriteString(string(r))
 				index := strings.Index(builder.String(), "0")
