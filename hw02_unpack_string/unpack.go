@@ -33,7 +33,7 @@ func WriteString(runes []rune, text string) (string, error) {
 		if err != nil {
 
 			builder.WriteString(string(r))
-		} else {
+		} else if err == nil {
 			if i == 0 {
 				return "", ErrInvalidString
 			} else if CheckDecimal(string(r), text) {
