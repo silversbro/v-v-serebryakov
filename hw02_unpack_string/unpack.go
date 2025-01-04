@@ -10,11 +10,9 @@ import (
 var ErrInvalidString = errors.New("invalid string")
 
 func Unpack(str string) (string, error) {
-
 	// Преобразуем строку в срез рун
 	runes := []rune(str)
 	readyString, err := WriteString(runes, str)
-
 	if err != nil {
 		fmt.Println(err, str)
 
@@ -36,7 +34,7 @@ func WriteString(runes []rune, text string) (string, error) {
 			switch {
 			case i == 0:
 				return "", ErrInvalidString
-			case CheckDecimal(string(r), text) == true:
+			case CheckDecimal(string(r), text):
 
 				return "", ErrInvalidString
 			case num == 0:
