@@ -13,11 +13,11 @@ func Unpack(str string) (string, error) {
 
 	// Преобразуем строку в срез рун
 	runes := []rune(str)
-
 	readyString, err := WriteString(runes, str)
 
 	if err != nil {
 		fmt.Println(err, str)
+
 		return str, err
 	}
 
@@ -35,11 +35,12 @@ func WriteString(runes []rune, text string) (string, error) {
 
 			builder.WriteString(string(r))
 		} else {
-			if i == 0 {
+			switch {
+			case i == 0:
 				return "", ErrInvalidString
-			} else if CheckDecimal(string(r), text) {
+			case CheckDecimal(string(r), text) == true:
 				return "", ErrInvalidString
-			} else if num == 0 {
+			case num == 0:
 				builder.WriteString(string(r))
 				index := strings.Index(builder.String(), "0")
 				revertVal := builder.String()[:index-1]
