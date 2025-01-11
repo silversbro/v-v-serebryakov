@@ -2,7 +2,6 @@ package hw02unpackstring
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 )
@@ -14,8 +13,6 @@ func Unpack(str string) (string, error) {
 	runes := []rune(str)
 	readyString, err := WriteString(runes, str)
 	if err != nil {
-		fmt.Println(err, str)
-
 		return str, err
 	}
 
