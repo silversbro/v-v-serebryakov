@@ -56,7 +56,3 @@ func WriteString(text string) (string, error) {
 
 	return builder.String(), nil
 }
-
-func clearText() {
-
-}
