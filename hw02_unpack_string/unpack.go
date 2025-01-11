@@ -18,12 +18,11 @@ func Unpack(str string) (string, error) {
 		return "", ErrInvalidString
 	}
 
-	if replaceZeroChar.MatchString(str) == true {
+	if replaceZeroChar.MatchString(str) {
 		str = replaceZeroChar.ReplaceAllString(str, "")
 	}
 
 	readyString, err := WriteString(str)
-
 	if err != nil {
 		return "", err
 	}
