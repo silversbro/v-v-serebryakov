@@ -2,25 +2,42 @@ package hw02unpackstring
 
 import (
 	"errors"
+	"regexp"
 	"strconv"
 	"strings"
 )
 
-var ErrInvalidString = errors.New("invalid string")
+var (
+	ErrInvalidString = errors.New("invalid string")
+	validNumber      = regexp.MustCompile(`\d+\d+`)
+	replaceZeroChar  = regexp.MustCompile(`.0`)
+)
 
 func Unpack(str string) (string, error) {
-	// Преобразуем строку в срез рун
-	runes := []rune(str)
-	readyString, err := WriteString(runes, str)
+	if validNumber.MatchString(str) {
+		return "", ErrInvalidString
+	}
+
+	if replaceZeroChar.MatchString(str) == true {
+		str = replaceZeroChar.ReplaceAllString(str, "")
+	}
+
+	readyString, err := WriteString(str)
+
 	if err != nil {
-		return str, err
+		return "", err
 	}
 
 	return readyString, nil
 }
 
-func WriteString(runes []rune, text string) (string, error) {
+func WriteString(text string) (string, error) {
 	var builder strings.Builder
+	runes := []rune(text)
+
+	if len(runes) < 2 {
+		return text, nil
+	}
 
 	// Распечатаем каждую руну отдельно
 	for i, r := range runes {
@@ -28,21 +45,8 @@ func WriteString(runes []rune, text string) (string, error) {
 		if err != nil {
 			builder.WriteString(string(r))
 		} else {
-			switch {
-			case i == 0:
+			if i == 0 {
 				return "", ErrInvalidString
-			case CheckDecimal(string(r), text):
-
-				return "", ErrInvalidString
-			case num == 0:
-				builder.WriteString(string(r))
-				index := strings.Index(builder.String(), "0")
-				revertVal := builder.String()[:index-1]
-
-				builder.Reset()
-				builder.WriteString(revertVal)
-
-				continue
 			}
 
 			repeated := strings.Repeat(string(runes[i-1]), num-1)
@@ -53,11 +57,6 @@ func WriteString(runes []rune, text string) (string, error) {
 	return builder.String(), nil
 }
 
-func CheckDecimal(num string, text string) bool {
-	var checkBuilder strings.Builder
-	checkBuilder.WriteString(num)
-	checkBuilder.WriteString("0")
-	index := strings.Index(text, checkBuilder.String())
+func clearText() {
 
-	return index != -1
 }

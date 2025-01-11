@@ -1,4 +1,4 @@
-module github.com/silversbro/hw02_unpack_string
+module github.com/silversbro/v-v-serebryakov/hw02_unpack_string
 
 go 1.22
 
