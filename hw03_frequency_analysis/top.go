@@ -17,7 +17,7 @@ func Top10(text string) []string {
 	readySlice := make([]string, 0)
 
 	for _, word := range words {
-		countMap[word] += 1
+		countMap[word]++
 	}
 
 	for i, countWord := range countMap {
@@ -28,9 +28,9 @@ func Top10(text string) []string {
 	sort.SliceStable(countWords, func(i, j int) bool {
 		if countWords[i].Count == countWords[j].Count {
 			return countWords[i].Word < countWords[j].Word
-		} else {
-			return countWords[i].Count > countWords[j].Count
 		}
+
+		return countWords[i].Count > countWords[j].Count
 	})
 
 	for i, countWord := range countWords {
