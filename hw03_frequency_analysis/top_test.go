@@ -43,11 +43,63 @@ var text = `Как видите, он  спускается  по  лестни�
 	посидеть у огня и послушать какую-нибудь интересную сказку.
 		В этот вечер...`
 
-func TestTop10(t *testing.T) {
-	t.Run("no words in empty string", func(t *testing.T) {
-		require.Len(t, Top10(""), 0)
-	})
+var text1 = `1 2323 1 444 66 22 33 45 65 21 88 99 95 86 23`
 
+var text2 = `dd a vv hh yy 7jj zzfv jj8 0a gg0 ggff zzx 4az dz2 dsg`
+
+var text3 = `ssd34 😃😀😀 🙄🙄🙄🙄 ^^^, 🫸🫸🫸 🤢🤢 😗😗😗😗 😸😹😻😼😽🙀😿`
+
+var expect = []string{
+	"он",        // 8
+	"а",         // 6
+	"и",         // 6
+	"ты",        // 5
+	"что",       // 5
+	"-",         // 4
+	"Кристофер", // 4
+	"если",      // 4
+	"не",        // 4
+	"то",        // 4
+}
+
+var expect1 = []string{
+	"1",
+	"21",
+	"22",
+	"23",
+	"2323",
+	"33",
+	"444",
+	"45",
+	"65",
+	"66",
+}
+
+var expect2 = []string{
+	"0a",
+	"4az",
+	"7jj",
+	"a",
+	"dd",
+	"dsg",
+	"dz2",
+	"gg0",
+	"ggff",
+	"hh",
+}
+
+var expect3 = []string{
+	"^^^,",
+	"ssd34",
+	"😃😀😀",
+	"😗😗😗😗",
+	"😸😹😻😼😽🙀😿",
+	"🙄🙄🙄🙄",
+	"🤢🤢",
+	"🫸🫸🫸",
+}
+
+func TestTop10(t *testing.T) {
 	t.Run("positive test", func(t *testing.T) {
 		if taskWithAsteriskIsCompleted {
 			expected := []string{
@@ -64,19 +116,29 @@ func TestTop10(t *testing.T) {
 			}
 			require.Equal(t, expected, Top10(text))
 		} else {
-			expected := []string{
-				"он",        // 8
-				"а",         // 6
-				"и",         // 6
-				"ты",        // 5
-				"что",       // 5
-				"-",         // 4
-				"Кристофер", // 4
-				"если",      // 4
-				"не",        // 4
-				"то",        // 4
+			tests := []struct {
+				input    string
+				expected []string
+			}{
+				{input: text, expected: expect},
+				{input: text1, expected: expect1},
+				{input: text2, expected: expect2},
+				{input: text3, expected: expect3},
 			}
-			require.Equal(t, expected, Top10(text))
+
+			for _, tc := range tests {
+				tc := tc
+				t.Run(tc.input, func(t *testing.T) {
+					result := Top10(tc.input)
+					require.Equal(t, tc.expected, result)
+				})
+			}
 		}
+	})
+}
+
+func TestTop10Negative(t *testing.T) {
+	t.Run("no words in empty string", func(t *testing.T) {
+		require.Len(t, Top10(""), 0)
 	})
 }

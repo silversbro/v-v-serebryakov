@@ -14,11 +14,12 @@ func Top10(text string) []string {
 	words := strings.Fields(text)
 	countMap := make(map[string]int)
 	countWords := make([]CountWord, 0)
-	readySlice := make([]string, 0)
 
 	for _, word := range words {
 		countMap[word]++
 	}
+
+	readySlice := make([]string, len(countMap))
 
 	for i, countWord := range countMap {
 		el := CountWord{Word: i, Count: countWord}
