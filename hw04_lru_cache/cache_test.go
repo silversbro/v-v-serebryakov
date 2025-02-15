@@ -10,15 +10,6 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	t.Run("empty cache", func(t *testing.T) {
-		c := NewCache(10)
-
-		_, ok := c.Get("aaa")
-		require.False(t, ok)
-
-		_, ok = c.Get("bbb")
-		require.False(t, ok)
-	})
 
 	t.Run("simple", func(t *testing.T) {
 		c := NewCache(5)
@@ -48,10 +39,47 @@ func TestCache(t *testing.T) {
 		require.False(t, ok)
 		require.Nil(t, val)
 	})
+}
 
-	t.Run("purge logic", func(t *testing.T) {
-		// Write me
-	})
+func TestCacheClear(t *testing.T) {
+
+	c := NewCache(10)
+
+	c.Set("aaa", 100)
+	c.Set("bbb", 200)
+	c.Clear()
+
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+
+}
+
+func TestCachePure(t *testing.T) {
+	c := NewCache(3)
+
+	c.Set("aaa", 100)
+	c.Set("bbb", 200)
+	c.Set("ccc", 400)
+	c.Set("ddd", 500)
+
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+
+	c.Set("bbb", 250)
+	c.Set("eee", 600)
+
+	_, ok = c.Get("ccc")
+	require.False(t, ok)
+}
+
+func TestCacheEmpty(t *testing.T) {
+	c := NewCache(10)
+
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+
+	_, ok = c.Get("bbb")
+	require.False(t, ok)
 }
 
 func TestCacheMultithreading(t *testing.T) {

@@ -1,13 +1,13 @@
 package hw04lrucache
 
 type List interface {
-	Len() int                          // Длина списка
-	Front() *ListItem                  // Первый элемент списка
-	Back() *ListItem                   // Последний элемент списка
-	PushFront(v interface{}) *ListItem // Добавление значения в начало
-	PushBack(v interface{}) *ListItem  // Добавление значения в конец
-	Remove(i *ListItem)                // Удаление элемента
-	MoveToFront(i *ListItem)           // Перемещение элемента в начало
+	Len() int
+	Front() *ListItem
+	Back() *ListItem
+	PushFront(v interface{}) *ListItem
+	PushBack(v interface{}) *ListItem
+	Remove(i *ListItem)
+	MoveToFront(i *ListItem)
 }
 
 type ListItem struct {
@@ -18,9 +18,9 @@ type ListItem struct {
 }
 
 type list struct {
-	head *ListItem // Указатель на голову списка
-	tail *ListItem // Указатель на хвост списка
-	len  int       // Длина списка
+	head *ListItem
+	tail *ListItem
+	len  int
 }
 
 func NewList() List {
