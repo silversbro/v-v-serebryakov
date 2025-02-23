@@ -24,11 +24,7 @@ type list struct {
 }
 
 func NewList() List {
-	return &list{
-		head: nil,
-		tail: nil,
-		len:  0,
-	}
+	return &list{}
 }
 
 func (list *list) Len() int {
