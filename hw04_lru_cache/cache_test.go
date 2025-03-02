@@ -10,48 +10,71 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	t.Run("empty cache", func(t *testing.T) {
-		c := NewCache(10)
+	c := NewCache(5)
 
-		_, ok := c.Get("aaa")
-		require.False(t, ok)
+	wasInCache := c.Set("aaa", 100)
+	require.False(t, wasInCache)
 
-		_, ok = c.Get("bbb")
-		require.False(t, ok)
-	})
+	wasInCache = c.Set("bbb", 200)
+	require.False(t, wasInCache)
 
-	t.Run("simple", func(t *testing.T) {
-		c := NewCache(5)
+	val, ok := c.Get("aaa")
+	require.True(t, ok)
+	require.Equal(t, 100, val)
 
-		wasInCache := c.Set("aaa", 100)
-		require.False(t, wasInCache)
+	val, ok = c.Get("bbb")
+	require.True(t, ok)
+	require.Equal(t, 200, val)
 
-		wasInCache = c.Set("bbb", 200)
-		require.False(t, wasInCache)
+	wasInCache = c.Set("aaa", 300)
+	require.True(t, wasInCache)
 
-		val, ok := c.Get("aaa")
-		require.True(t, ok)
-		require.Equal(t, 100, val)
+	val, ok = c.Get("aaa")
+	require.True(t, ok)
+	require.Equal(t, 300, val)
 
-		val, ok = c.Get("bbb")
-		require.True(t, ok)
-		require.Equal(t, 200, val)
+	val, ok = c.Get("ccc")
+	require.False(t, ok)
+	require.Nil(t, val)
+}
 
-		wasInCache = c.Set("aaa", 300)
-		require.True(t, wasInCache)
+func TestCacheClear(t *testing.T) {
+	c := NewCache(10)
 
-		val, ok = c.Get("aaa")
-		require.True(t, ok)
-		require.Equal(t, 300, val)
+	c.Set("aaa", 100)
+	c.Set("bbb", 200)
+	c.Clear()
 
-		val, ok = c.Get("ccc")
-		require.False(t, ok)
-		require.Nil(t, val)
-	})
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+}
 
-	t.Run("purge logic", func(t *testing.T) {
-		// Write me
-	})
+func TestCachePure(t *testing.T) {
+	c := NewCache(3)
+
+	c.Set("aaa", 100)
+	c.Set("bbb", 200)
+	c.Set("ccc", 400)
+	c.Set("ddd", 500)
+
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+
+	c.Set("bbb", 250)
+	c.Set("eee", 600)
+
+	_, ok = c.Get("ccc")
+	require.False(t, ok)
+}
+
+func TestCacheEmpty(t *testing.T) {
+	c := NewCache(10)
+
+	_, ok := c.Get("aaa")
+	require.False(t, ok)
+
+	_, ok = c.Get("bbb")
+	require.False(t, ok)
 }
 
 func TestCacheMultithreading(t *testing.T) {
