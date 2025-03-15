@@ -31,46 +31,54 @@ func (s *SafeSlice) Get() []int {
 	return s.slice
 }
 
-// Функция для генерации случайного числа и возможной ошибки
 func executeTask(
-	tasks <-chan Task,
-	ch chan<- int,
+	tasksCh <-chan Task,
+	dataCh chan int,
 	errCh chan int,
 	wg *sync.WaitGroup,
 	stopChan chan error,
 	maxErrors int,
 ) {
 	defer wg.Done()
+	fmt.Println("Start task execute ")
 
 	for {
 		select {
-		case <-stopChan:
-			return
-		case <-errCh:
-			return
-		case task := <-tasks:
+		case task, ok := <-tasksCh:
+			if !ok {
+				return
+			}
+
 			err := task()
 
 			if err != nil {
 				errCh <- 1
-				return
-			}
+				fmt.Printf("Error in task: %v\n", err)
 
-			select {
-			case ch <- 1:
-			case <-errCh:
 				if len(errCh) > maxErrors {
 					stopChan <- ErrErrorsLimitExceeded
 
 					return
 				}
 
-				continue
-			case <-stopChan:
 				return
 			}
-		default:
+
+			dataCh <- 1
+
 			return
+		case <-stopChan:
+			fmt.Println("Error in task stop chain")
+
+			return
+		case <-errCh:
+			fmt.Println("Error in task")
+
+			if len(errCh) > maxErrors {
+				stopChan <- ErrErrorsLimitExceeded
+
+				return
+			}
 		}
 	}
 }
@@ -78,19 +86,17 @@ func executeTask(
 func Run(tasks []Task, n, m int) error {
 	dataCh := make(chan int)
 	errCh := make(chan int)
+	var err error
 
-	jobs := make(chan Task, len(tasks))
+	jobs := make(chan Task)
 	stopChan := make(chan error)
-	defer close(dataCh)
 	defer close(errCh)
+	defer close(stopChan)
+	defer close(dataCh)
 
-	// WaitGroup для ожидания завершения всех горутин
 	var wg sync.WaitGroup
-
-	// Структура для хранения данных
 	safeSlice := SafeSlice{}
 
-	// Запуск 100 горутин для генерации чисел
 	for i := 0; i < n; i++ {
 		wg.Add(1)
 		go executeTask(jobs, dataCh, errCh, &wg, stopChan, m)
@@ -99,39 +105,43 @@ func Run(tasks []Task, n, m int) error {
 	for _, task := range tasks {
 		jobs <- task
 	}
-
-	close(jobs)
+	defer close(jobs)
 
 	// Горутина для чтения данных из канала
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		timer := time.NewTimer(2 * time.Second)
+		timer := time.NewTimer(30 * time.Second)
 		defer timer.Stop()
 
 		for {
 			select {
-			case num := <-dataCh:
+			case num, ok := <-dataCh:
+				if !ok {
+					return
+				}
+
 				safeSlice.Append(num)
 			case <-timer.C:
 				// Время вышло
-				fmt.Println("Timeout.")
-				close(stopChan)
-				return
+				total := len(safeSlice.Get()) + len(errCh)
+				fmt.Printf("Всего задач и ошибок: %v\n", total)
+
+				panic("Timeout.")
 			case err = <-stopChan:
-				close(stopChan)
 				fmt.Printf("Error: %v\n", err)
 
-				return err
+				return
 			}
 		}
 	}()
 
 	// Ожидание завершения всех горутин
 	wg.Wait()
+	total := len(safeSlice.Get()) + len(errCh)
 
-	fmt.Printf("Выполнилось: %v\n", len(safeSlice.Get()))
+	fmt.Printf("Выполнилось: %v\n", total)
 
-	return error
+	return err
 }
