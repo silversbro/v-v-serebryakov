@@ -146,12 +146,11 @@ func Run(tasks []Task, n, m int) error {
 				stopSignalMutex.Unlock()
 
 				if (len(safeSlice.Get()) + errorCount) == len(tasks) {
-
 					return
 				}
 
 				// Небольшая задержка, чтобы не загружать процессор
-				time.Sleep(10 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}()
