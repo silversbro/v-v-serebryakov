@@ -11,137 +11,155 @@ var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 
 type Task func() error
 
-// Структура для хранения данных с мьютексом
 type SafeSlice struct {
 	mu    sync.Mutex
 	slice []int
 }
 
-// Добавление значения в слайс
 func (s *SafeSlice) Append(value int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.slice = append(s.slice, value)
 }
 
-// Получение слайса
 func (s *SafeSlice) Get() []int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.slice
+	// Возвращаем копию слайса, чтобы избежать race condition
+	result := make([]int, len(s.slice))
+	copy(result, s.slice)
+
+	return result
 }
 
 func executeTask(
 	tasksCh <-chan Task,
-	dataCh chan int,
-	errCh chan int,
+	data *SafeSlice,
+	errCh chan<- error,
 	wg *sync.WaitGroup,
-	stopChan chan error,
-	maxErrors int,
+	maxError int,
+	errorCount *int,
+	errorCountMutex *sync.Mutex,
+	stopSignal *bool,
+	stopSignalMutex *sync.Mutex,
 ) {
 	defer wg.Done()
-	fmt.Println("Start task execute ")
 
-	for {
-		select {
-		case task, ok := <-tasksCh:
-			if !ok {
-				return
-			}
-
-			err := task()
-
-			if err != nil {
-				errCh <- 1
-				fmt.Printf("Error in task: %v\n", err)
-
-				if len(errCh) > maxErrors {
-					stopChan <- ErrErrorsLimitExceeded
-
-					return
-				}
-
-				return
-			}
-
-			dataCh <- 1
+	for task := range tasksCh {
+		// Проверяем, не было ли сигнала остановки
+		stopSignalMutex.Lock()
+		if *stopSignal {
+			stopSignalMutex.Unlock()
 
 			return
-		case <-stopChan:
-			fmt.Println("Error in task stop chain")
+		}
+		stopSignalMutex.Unlock()
 
-			return
-		case <-errCh:
-			fmt.Println("Error in task")
+		err := task()
+		if err != nil {
+			errorCountMutex.Lock()
+			*errorCount++ // Увеличиваем счетчик ошибок
+			errorCountMutex.Unlock()
+			errCh <- err
 
-			if len(errCh) > maxErrors {
-				stopChan <- ErrErrorsLimitExceeded
-
+			errorCountMutex.Lock()
+			if *errorCount > maxError {
+				stopSignalMutex.Lock()
+				*stopSignal = true // Устанавливаем сигнал остановки
+				stopSignalMutex.Unlock()
+				errorCountMutex.Unlock()
 				return
 			}
+			errorCountMutex.Unlock()
+		} else {
+			data.Append(1)
 		}
 	}
 }
 
 func Run(tasks []Task, n, m int) error {
-	dataCh := make(chan int)
-	errCh := make(chan int)
+	errCh := make(chan error, len(tasks))
+	defer close(errCh)
+
+	jobs := make(chan Task, len(tasks))
 	var err error
 
-	jobs := make(chan Task)
-	stopChan := make(chan error)
-	defer close(errCh)
-	defer close(stopChan)
-	defer close(dataCh)
-
 	var wg sync.WaitGroup
-	safeSlice := SafeSlice{}
+	safeSlice := &SafeSlice{}
+
+	var errorCount int
+	var errorCountMutex sync.Mutex
+	var stopSignal bool
+	var stopSignalMutex sync.Mutex
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go executeTask(jobs, dataCh, errCh, &wg, stopChan, m)
+		go executeTask(jobs, safeSlice, errCh, &wg, m, &errorCount, &errorCountMutex, &stopSignal, &stopSignalMutex)
 	}
 
-	for _, task := range tasks {
-		jobs <- task
-	}
-	defer close(jobs)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for _, task := range tasks {
+			jobs <- task
+		}
+		close(jobs)
+	}()
 
-	// Горутина для чтения данных из канала
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 
-		timer := time.NewTimer(30 * time.Second)
+		timer := time.NewTimer(10 * time.Second)
 		defer timer.Stop()
 
 		for {
 			select {
-			case num, ok := <-dataCh:
-				if !ok {
+			case <-timer.C:
+				stopSignalMutex.Lock()
+				stopSignal = true
+				stopSignalMutex.Unlock()
+				err = errors.New("timeout")
+
+				return
+			case <-errCh:
+				errorCountMutex.Lock()
+				if errorCount > m {
+					stopSignalMutex.Lock()
+					stopSignal = true
+					stopSignalMutex.Unlock()
+					err = ErrErrorsLimitExceeded
+					errorCountMutex.Unlock()
+
 					return
 				}
 
-				safeSlice.Append(num)
-			case <-timer.C:
-				// Время вышло
-				total := len(safeSlice.Get()) + len(errCh)
-				fmt.Printf("Всего задач и ошибок: %v\n", total)
+				errorCountMutex.Unlock()
+			default:
+				stopSignalMutex.Lock()
+				if stopSignal {
+					stopSignalMutex.Unlock()
 
-				panic("Timeout.")
-			case err = <-stopChan:
-				fmt.Printf("Error: %v\n", err)
+					return
+				}
 
-				return
+				stopSignalMutex.Unlock()
+
+				if (len(safeSlice.Get()) + errorCount) == len(tasks) {
+
+					return
+				}
+
+				// Небольшая задержка, чтобы не загружать процессор
+				time.Sleep(10 * time.Millisecond)
 			}
 		}
 	}()
 
-	// Ожидание завершения всех горутин
 	wg.Wait()
-	total := len(safeSlice.Get()) + len(errCh)
 
-	fmt.Printf("Выполнилось: %v\n", total)
+	fmt.Printf("Successful tasks: %d\n", len(safeSlice.Get()))
+	fmt.Printf("Errors: %d\n", errorCount)
 
 	return err
 }
