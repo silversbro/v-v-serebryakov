@@ -25,7 +25,6 @@ func (s *SafeSlice) Append(value int) {
 func (s *SafeSlice) Get() []int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	// Возвращаем копию слайса, чтобы избежать race condition
 	result := make([]int, len(s.slice))
 	copy(result, s.slice)
 
@@ -46,7 +45,6 @@ func executeTask(
 	defer wg.Done()
 
 	for task := range tasksCh {
-		// Проверяем, не было ли сигнала остановки
 		stopSignalMutex.Lock()
 		if *stopSignal {
 			stopSignalMutex.Unlock()
@@ -58,14 +56,14 @@ func executeTask(
 		err := task()
 		if err != nil {
 			errorCountMutex.Lock()
-			*errorCount++ // Увеличиваем счетчик ошибок
+			*errorCount++
 			errorCountMutex.Unlock()
 			errCh <- err
 
 			errorCountMutex.Lock()
 			if *errorCount > maxError {
 				stopSignalMutex.Lock()
-				*stopSignal = true // Устанавливаем сигнал остановки
+				*stopSignal = true
 				stopSignalMutex.Unlock()
 				errorCountMutex.Unlock()
 				return
