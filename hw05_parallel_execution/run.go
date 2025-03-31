@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"time"
+	"sync/atomic"
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
@@ -35,9 +35,8 @@ func executeTask(
 	tasksCh <-chan Task,
 	data *SafeSlice,
 	wg *sync.WaitGroup,
-	maxError int,
-	errorCount *int,
-	errorCountMutex *sync.Mutex,
+	maxError int64,
+	errorCount *int64,
 	stopSignal *bool,
 	stopSignalMutex *sync.Mutex,
 ) {
@@ -54,19 +53,13 @@ func executeTask(
 
 		err := task()
 		if err != nil {
-			errorCountMutex.Lock()
-			*errorCount++
-			errorCountMutex.Unlock()
-
-			errorCountMutex.Lock()
-			if *errorCount > maxError {
+			if atomic.AddInt64(errorCount, 1) >= maxError {
 				stopSignalMutex.Lock()
 				*stopSignal = true
 				stopSignalMutex.Unlock()
-				errorCountMutex.Unlock()
+
 				return
 			}
-			errorCountMutex.Unlock()
 		} else {
 			data.Append(1)
 		}
@@ -74,27 +67,31 @@ func executeTask(
 }
 
 func Run(tasks []Task, n, m int) error {
-
 	jobs := make(chan Task, len(tasks))
 	var err error
 
 	var wg sync.WaitGroup
 	safeSlice := &SafeSlice{}
 
-	var errorCount int
-	var errorCountMutex sync.Mutex
+	maxError := int64(m)
+
+	var errorCount int64
 	var stopSignal bool
 	var stopSignalMutex sync.Mutex
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go executeTask(jobs, safeSlice, &wg, m, &errorCount, &errorCountMutex, &stopSignal, &stopSignalMutex)
+		go executeTask(jobs, safeSlice, &wg, maxError, &errorCount, &stopSignal, &stopSignalMutex)
 	}
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		for _, task := range tasks {
+			if atomic.LoadInt64(&errorCount) > maxError {
+				return
+			}
+
 			jobs <- task
 		}
 		close(jobs)
@@ -105,18 +102,16 @@ func Run(tasks []Task, n, m int) error {
 		defer wg.Done()
 
 		for {
-			errorCountMutex.Lock()
-			if errorCount > m {
+			loadCountError := atomic.LoadInt64(&errorCount)
+
+			if loadCountError >= maxError {
 				stopSignalMutex.Lock()
 				stopSignal = true
 				stopSignalMutex.Unlock()
 				err = ErrErrorsLimitExceeded
-				errorCountMutex.Unlock()
 
 				return
 			}
-
-			errorCountMutex.Unlock()
 
 			stopSignalMutex.Lock()
 			if stopSignal {
@@ -127,12 +122,9 @@ func Run(tasks []Task, n, m int) error {
 
 			stopSignalMutex.Unlock()
 
-			if (len(safeSlice.Get()) + errorCount) == len(tasks) {
+			if (int64(len(safeSlice.Get())) + loadCountError) == int64(len(tasks)) {
 				return
 			}
-
-			// Небольшая задержка, чтобы не загружать процессор
-			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
