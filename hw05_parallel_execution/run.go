@@ -34,7 +34,6 @@ func (s *SafeSlice) Get() []int {
 func executeTask(
 	tasksCh <-chan Task,
 	data *SafeSlice,
-	errCh chan<- error,
 	wg *sync.WaitGroup,
 	maxError int,
 	errorCount *int,
@@ -58,7 +57,6 @@ func executeTask(
 			errorCountMutex.Lock()
 			*errorCount++
 			errorCountMutex.Unlock()
-			errCh <- err
 
 			errorCountMutex.Lock()
 			if *errorCount > maxError {
@@ -76,8 +74,6 @@ func executeTask(
 }
 
 func Run(tasks []Task, n, m int) error {
-	errCh := make(chan error, len(tasks))
-	defer close(errCh)
 
 	jobs := make(chan Task, len(tasks))
 	var err error
@@ -92,7 +88,7 @@ func Run(tasks []Task, n, m int) error {
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go executeTask(jobs, safeSlice, errCh, &wg, m, &errorCount, &errorCountMutex, &stopSignal, &stopSignalMutex)
+		go executeTask(jobs, safeSlice, &wg, m, &errorCount, &errorCountMutex, &stopSignal, &stopSignalMutex)
 	}
 
 	wg.Add(1)
@@ -108,48 +104,35 @@ func Run(tasks []Task, n, m int) error {
 	go func() {
 		defer wg.Done()
 
-		timer := time.NewTimer(10 * time.Second)
-		defer timer.Stop()
-
 		for {
-			select {
-			case <-timer.C:
+			errorCountMutex.Lock()
+			if errorCount > m {
 				stopSignalMutex.Lock()
 				stopSignal = true
 				stopSignalMutex.Unlock()
-				err = errors.New("timeout")
+				err = ErrErrorsLimitExceeded
+				errorCountMutex.Unlock()
 
 				return
-			case <-errCh:
-				errorCountMutex.Lock()
-				if errorCount > m {
-					stopSignalMutex.Lock()
-					stopSignal = true
-					stopSignalMutex.Unlock()
-					err = ErrErrorsLimitExceeded
-					errorCountMutex.Unlock()
+			}
 
-					return
-				}
+			errorCountMutex.Unlock()
 
-				errorCountMutex.Unlock()
-			default:
-				stopSignalMutex.Lock()
-				if stopSignal {
-					stopSignalMutex.Unlock()
-
-					return
-				}
-
+			stopSignalMutex.Lock()
+			if stopSignal {
 				stopSignalMutex.Unlock()
 
-				if (len(safeSlice.Get()) + errorCount) == len(tasks) {
-					return
-				}
-
-				// Небольшая задержка, чтобы не загружать процессор
-				time.Sleep(100 * time.Millisecond)
+				return
 			}
+
+			stopSignalMutex.Unlock()
+
+			if (len(safeSlice.Get()) + errorCount) == len(tasks) {
+				return
+			}
+
+			// Небольшая задержка, чтобы не загружать процессор
+			time.Sleep(100 * time.Millisecond)
 		}
 	}()
 
