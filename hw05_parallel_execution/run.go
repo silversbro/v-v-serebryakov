@@ -8,6 +8,7 @@ import (
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
+
 var ErrEmptyTask = errors.New("errors empty task")
 
 type Task func() error
@@ -42,11 +43,9 @@ func executeTask(
 	defer wg.Done()
 
 	for task := range tasksCh {
-
 		err := task()
 		if err != nil {
 			if atomic.AddInt64(errorCount, 1) >= maxError {
-
 				return
 			}
 		} else {
