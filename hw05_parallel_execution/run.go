@@ -8,6 +8,7 @@ import (
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
+var ErrEmptyTask = errors.New("errors empty task")
 
 type Task func() error
 
@@ -37,26 +38,14 @@ func executeTask(
 	wg *sync.WaitGroup,
 	maxError int64,
 	errorCount *int64,
-	stopSignal *bool,
-	stopSignalMutex *sync.Mutex,
 ) {
 	defer wg.Done()
 
 	for task := range tasksCh {
-		stopSignalMutex.Lock()
-		if *stopSignal {
-			stopSignalMutex.Unlock()
-
-			return
-		}
-		stopSignalMutex.Unlock()
 
 		err := task()
 		if err != nil {
 			if atomic.AddInt64(errorCount, 1) >= maxError {
-				stopSignalMutex.Lock()
-				*stopSignal = true
-				stopSignalMutex.Unlock()
 
 				return
 			}
@@ -67,21 +56,24 @@ func executeTask(
 }
 
 func Run(tasks []Task, n, m int) error {
+	if len(tasks) == 0 {
+		return ErrEmptyTask
+	}
+
+	if m == 0 {
+		return ErrErrorsLimitExceeded
+	}
+
 	jobs := make(chan Task, len(tasks))
 	var err error
-
 	var wg sync.WaitGroup
 	safeSlice := &SafeSlice{}
-
 	maxError := int64(m)
-
 	var errorCount int64
-	var stopSignal bool
-	var stopSignalMutex sync.Mutex
 
 	for i := 0; i < n; i++ {
 		wg.Add(1)
-		go executeTask(jobs, safeSlice, &wg, maxError, &errorCount, &stopSignal, &stopSignalMutex)
+		go executeTask(jobs, safeSlice, &wg, maxError, &errorCount)
 	}
 
 	wg.Add(1)
@@ -103,24 +95,11 @@ func Run(tasks []Task, n, m int) error {
 
 		for {
 			loadCountError := atomic.LoadInt64(&errorCount)
-
 			if loadCountError >= maxError {
-				stopSignalMutex.Lock()
-				stopSignal = true
-				stopSignalMutex.Unlock()
 				err = ErrErrorsLimitExceeded
 
 				return
 			}
-
-			stopSignalMutex.Lock()
-			if stopSignal {
-				stopSignalMutex.Unlock()
-
-				return
-			}
-
-			stopSignalMutex.Unlock()
 
 			if (int64(len(safeSlice.Get())) + loadCountError) == int64(len(tasks)) {
 				return
