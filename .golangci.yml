@@ -1,3 +1,4 @@
+version: "2"
 run:
   tests: true
   build-tags:
@@ -22,6 +23,7 @@ linters-settings:
         allow:
           - $gostd
           - github.com/stretchr/testify
+          - go.uber.org/goleak
 
 issues:
   exclude-rules:
@@ -43,7 +45,6 @@ linters:
     - durationcheck
     - errorlint
     - exhaustive
-    - exportloopref
     - funlen
     - gci
     - gocognit
