@@ -15,63 +15,44 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 		return in
 	}
 
-	out := make(chan interface{})
 	var wg sync.WaitGroup
+	prevChan := in
 
-	stageChans := make([]chan interface{}, len(stages)+1)
-	for i := range stageChans {
-		stageChans[i] = make(chan interface{})
-	}
-
-	for i, stage := range stages {
+	for _, stage := range stages {
+		stageChan := make(Bi)
 		wg.Add(1)
-		go func(index int, s Stage) {
+
+		go func(stage Stage, inChan In, outChan Bi) {
 			defer wg.Done()
-			defer close(stageChans[index+1])
+			defer close(outChan)
 
 			for {
 				select {
 				case <-done:
 					return
-				case v, ok := <-stageChans[index]:
+				case v, ok := <-inChan:
 					if !ok {
 						return
 					}
-					sOut := s(makeInChan(v))
+					sOut := stage(makeInChan(v))
 					for v2 := range sOut {
 						select {
 						case <-done:
 							return
-						case stageChans[index+1] <- v2:
+						case outChan <- v2:
 						}
 					}
 				}
 			}
-		}(i, stage)
+		}(stage, prevChan, stageChan)
+
+		prevChan = stageChan
 	}
 
-	go func() {
-		defer close(stageChans[0])
-		for {
-			select {
-			case <-done:
-				return
-			case v, ok := <-in:
-				if !ok {
-					return
-				}
-				select {
-				case <-done:
-					return
-				case stageChans[0] <- v:
-				}
-			}
-		}
-	}()
-
+	out := make(Bi)
 	go func() {
 		defer close(out)
-		for v := range stageChans[len(stageChans)-1] {
+		for v := range prevChan {
 			select {
 			case <-done:
 				return
@@ -80,11 +61,15 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 		}
 	}()
 
+	go func() {
+		wg.Wait()
+	}()
+
 	return out
 }
 
 func makeInChan(v interface{}) In {
-	ch := make(chan interface{}, 1)
+	ch := make(Bi, 1)
 	ch <- v
 	close(ch)
 	return ch
