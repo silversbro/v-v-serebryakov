@@ -5,6 +5,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+
 	//nolint
 	"github.com/stretchr/testify/require"
 )
