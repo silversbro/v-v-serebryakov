@@ -9,46 +9,44 @@ type (
 type Stage func(in In) (out Out)
 
 func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	// Если нет стейджей, просто возвращаем входной канал
 	if len(stages) == 0 {
 		return in
 	}
 
-	prevChan := in
-
+	current := in
 	for _, stage := range stages {
-		stageChan := make(Bi)
-
-		go func(stage Stage, inChan In, outChan Bi) {
-			defer close(outChan)
-
-			for {
-				select {
-				case <-done:
-					return
-				case v, ok := <-inChan:
-					if !ok {
-						return
-					}
-
-					sOut := stage(makeInChan(v))
-					for v2 := range sOut {
-						select {
-						case outChan <- v2:
-						}
-					}
-				}
-			}
-		}(stage, prevChan, stageChan)
-
-		prevChan = stageChan
+		// Запускаем каждый стейдж, передавая ему текущий канал
+		current = runStage(stage, current, done)
 	}
 
-	return prevChan
+	return current
 }
 
-func makeInChan(v interface{}) In {
-	ch := make(Bi, 1)
-	ch <- v
-	close(ch)
-	return ch
+func runStage(stage Stage, in In, done In) Out {
+	out := make(Bi)
+
+	go func() {
+		stageOut := stage(in)
+		defer close(out)
+
+		for {
+			select {
+			case <-done:
+				return
+			case val, ok := <-stageOut:
+				if !ok {
+					return
+				}
+				select {
+				case out <- val:
+					continue
+				case <-done:
+					return
+				}
+			}
+		}
+	}()
+
+	return out
 }
