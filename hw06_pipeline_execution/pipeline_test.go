@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	//nolint
 	"github.com/stretchr/testify/require"
 )
 
@@ -14,6 +13,8 @@ const (
 	sleepPerStage = time.Millisecond * 100
 	fault         = sleepPerStage / 2
 )
+
+var isFullTesting = true
 
 func TestPipeline(t *testing.T) {
 	// Stage generator
@@ -95,7 +96,10 @@ func TestPipeline(t *testing.T) {
 }
 
 func TestAllStageStop(t *testing.T) {
-	wg := &sync.WaitGroup{}
+	if !isFullTesting {
+		return
+	}
+	wg := sync.WaitGroup{}
 	// Stage generator
 	g := func(_ string, f func(v interface{}) interface{}) Stage {
 		return func(in In) Out {
@@ -143,8 +147,8 @@ func TestAllStageStop(t *testing.T) {
 		for s := range ExecutePipeline(in, done, stages...) {
 			result = append(result, s.(string))
 		}
+		wg.Wait()
 
 		require.Len(t, result, 0)
 	})
-	wg.Wait()
 }

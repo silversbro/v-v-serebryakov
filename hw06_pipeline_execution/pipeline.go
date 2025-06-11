@@ -33,6 +33,8 @@ func runStage(stage Stage, in In, done In) Out {
 		for {
 			select {
 			case <-done:
+				go drainChannel(stageOut)
+
 				return
 			case val, ok := <-stageOut:
 				if !ok {
@@ -42,6 +44,8 @@ func runStage(stage Stage, in In, done In) Out {
 				case out <- val:
 					continue
 				case <-done:
+					go drainChannel(stageOut)
+
 					return
 				}
 			}
@@ -49,4 +53,10 @@ func runStage(stage Stage, in In, done In) Out {
 	}()
 
 	return out
+}
+
+func drainChannel(ch <-chan interface{}) {
+	//nolint
+	for range ch {
+	}
 }
