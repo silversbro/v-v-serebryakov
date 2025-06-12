@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 var (
@@ -86,7 +87,7 @@ func copyFile() error {
 		bytesToCopy = min(limit, fileInfo.Size()-offset)
 	}
 
-	buf := make([]byte, 32*1024) // 32KB buffer
+	buf := make([]byte, 64*1024) // 32KB buffer
 	var totalCopied int64
 	lastProgress := -1
 
@@ -115,6 +116,7 @@ func copyFile() error {
 			fmt.Printf("\rProgress: %d%%", progress)
 			lastProgress = progress
 		}
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	fmt.Println("\nCopy completed successfully!")
