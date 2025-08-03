@@ -59,7 +59,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return getError(ErrReadingFromFile, err)
 	}
 
-	destFile, err := os.OpenFile(toPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600) // #nosec G304
+	destFile, err := os.OpenFile(toPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777) // #nosec G304
 	if err != nil {
 		return getError(ErrCreateDestinationFile, err)
 	}
