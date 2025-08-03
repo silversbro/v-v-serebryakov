@@ -125,5 +125,5 @@ func getError(errors error, errSys error) error {
 		return fmt.Errorf("%w", errors)
 	}
 
-	return fmt.Errorf("%s: %w", errors.Error(), errSys)
+	return fmt.Errorf("%w: %v", errors, errSys) //nolint:errorlint
 }
