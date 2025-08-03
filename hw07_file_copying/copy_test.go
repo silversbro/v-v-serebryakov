@@ -1,13 +1,13 @@
-package main
+package hw07filecopying
 
 import (
 	"errors"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 )
 
+//nolint:errcheck,gosec
 func TestCopy(t *testing.T) {
 	// Создаем временную директорию для тестов
 	testDir, err := os.Getwd()
@@ -65,7 +65,7 @@ func TestCopy(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Создаем исходный файл
-			srcFile, err := ioutil.TempFile(testDir, "src_*.txt")
+			srcFile, err := os.CreateTemp(testDir, "src_*.txt")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
@@ -77,7 +77,7 @@ func TestCopy(t *testing.T) {
 			srcFile.Close()
 
 			// Создаем файл назначения
-			dstFile, err := ioutil.TempFile(testDir, "dst_*.txt")
+			dstFile, err := os.CreateTemp(testDir, "dst_*.txt")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
@@ -104,7 +104,7 @@ func TestCopy(t *testing.T) {
 
 			// Проверяем содержимое скопированного файла
 			expectedContent := calculateExpectedContent(tt.srcContent, tt.offset, tt.limit)
-			actualContent, err := ioutil.ReadFile(dstFile.Name())
+			actualContent, err := os.ReadFile(dstFile.Name())
 			if err != nil {
 				t.Errorf("Failed to read dst file: %v", err)
 				return
@@ -134,6 +134,7 @@ func calculateExpectedContent(content string, offset, limit int64) string {
 	return content[offset:end]
 }
 
+//nolint:errcheck,gosec
 func TestCopyToNonexistentDir(t *testing.T) {
 	testDir, err := os.Getwd()
 	if err != nil {
@@ -141,7 +142,7 @@ func TestCopyToNonexistentDir(t *testing.T) {
 	}
 
 	// Создаем исходный файл
-	srcFile, err := ioutil.TempFile(testDir, "src_*.txt")
+	srcFile, err := os.CreateTemp(testDir, "src_*.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -161,6 +162,7 @@ func TestCopyToNonexistentDir(t *testing.T) {
 	}
 }
 
+//nolint:errcheck,gosec
 func TestCopyFromNonexistentFile(t *testing.T) {
 	testDir, err := os.Getwd()
 	if err != nil {
@@ -168,7 +170,7 @@ func TestCopyFromNonexistentFile(t *testing.T) {
 	}
 
 	// Создаем файл назначения
-	dstFile, err := ioutil.TempFile(testDir, "dst_*.txt")
+	dstFile, err := os.CreateTemp(testDir, "dst_*.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}

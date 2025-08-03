@@ -1,33 +1,45 @@
-package main
+package hw07filecopying
 
 import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
 )
 
 var (
-	ErrEmptyFile             = errors.New("source file is empty")
-	ErrFileGetInfo           = errors.New("error file get info")
-	ErrUnsupportedFile       = errors.New("unsupported file")
-	ErrReadingFromFile       = errors.New("error reading from file")
+	// ErrEmptyFile возвращается, когда исходный файл пуст.
+	ErrEmptyFile = errors.New("source file is empty")
+	// ErrFileGetInfo возвращается, не получилось получить информацию.
+	ErrFileGetInfo = errors.New("error file get info")
+	// ErrUnsupportedFile возвращается, когда читаемый файл не поддерживается.
+	ErrUnsupportedFile = errors.New("unsupported file")
+	// ErrReadingFromFile возвращается, когда ошибка при чтении файла.
+	ErrReadingFromFile = errors.New("error reading from file")
+	// ErrOffsetExceedsFileSize возвращается, когда отступ больше чем размер файла.
 	ErrOffsetExceedsFileSize = errors.New("offset exceeds file size")
+	// ErrCreateDestinationFile возвращается, когда не возможно создать файл для записи.
 	ErrCreateDestinationFile = errors.New("failed to create destination file")
-	ErrWriteDestinationFile  = errors.New("error writing to destination")
+	// ErrWriteDestinationFile возвращается, когда не возможно записать в файл.
+	ErrWriteDestinationFile = errors.New("error writing to destination")
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-
-	srcFile, err := os.Open(fromPath)
+	srcFile, err := os.Open(fromPath) // #nosec G304
 	if err != nil {
 		if os.IsPermission(err) {
 			return getError(ErrReadingFromFile, err)
 		}
 		return getError(ErrUnsupportedFile, err)
 	}
-	defer srcFile.Close()
+
+	defer func() {
+		if err := srcFile.Close(); err != nil {
+			log.Print("Error closing file: ", err)
+		}
+	}()
 
 	fileInfo, err := srcFile.Stat()
 	if err != nil {
@@ -47,12 +59,16 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return getError(ErrReadingFromFile, err)
 	}
 
-	destFile, err := os.OpenFile(toPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0777)
+	destFile, err := os.OpenFile(toPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600) // #nosec G304
 	if err != nil {
 		return getError(ErrCreateDestinationFile, err)
 	}
 
-	defer destFile.Close()
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			log.Print("Error closing file destination: ", err)
+		}
+	}()
 
 	var bytesToCopy int64
 	if limit == 0 {
@@ -109,5 +125,5 @@ func getError(errors error, errSys error) error {
 		return fmt.Errorf("%w", errors)
 	}
 
-	return fmt.Errorf("%w: %v", errors, errSys)
+	return fmt.Errorf("%s: %w", errors.Error(), errSys)
 }
