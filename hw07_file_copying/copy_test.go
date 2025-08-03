@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-//nolint:errcheck,gosec
+//nolint:errcheck
 func TestCopy(t *testing.T) {
 	// Создаем временную директорию для тестов
 	testDir, err := os.Getwd()
@@ -134,7 +134,7 @@ func calculateExpectedContent(content string, offset, limit int64) string {
 	return content[offset:end]
 }
 
-//nolint:errcheck,gosec
+//nolint:errcheck
 func TestCopyToNonexistentDir(t *testing.T) {
 	testDir, err := os.Getwd()
 	if err != nil {
@@ -162,7 +162,7 @@ func TestCopyToNonexistentDir(t *testing.T) {
 	}
 }
 
-//nolint:errcheck,gosec
+//nolint:errcheck
 func TestCopyFromNonexistentFile(t *testing.T) {
 	testDir, err := os.Getwd()
 	if err != nil {
