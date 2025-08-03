@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
+# Сборка
 go build -o go-cp
 
 ./go-cp -from testdata/input.txt -to out.txt
