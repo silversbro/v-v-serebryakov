@@ -18,7 +18,6 @@ func init() {
 	flag.Int64Var(&offset, "offset", 0, "offset in input file")
 }
 
-//nolint:unused
 func main() {
 	flag.Parse()
 
@@ -33,7 +32,6 @@ func main() {
 	}
 }
 
-//nolint:unused
 func validateArgs() error {
 	if from == "" || to == "" {
 		return fmt.Errorf("both 'from' and 'to' paths must be specified")
