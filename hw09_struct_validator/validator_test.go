@@ -36,6 +36,7 @@ type (
 	}
 )
 
+//nolint:gocognit
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -130,29 +131,27 @@ func TestValidate(t *testing.T) {
 				return
 			}
 
-			switch expected := tt.expectedErr.(type) {
-			case ValidationErrors:
-				actual, ok := err.(ValidationErrors)
-				if !ok {
+			var expectedValidationErrs ValidationErrors
+			if errors.As(tt.expectedErr, &expectedValidationErrs) {
+				var actualValidationErrs ValidationErrors
+				if !errors.As(err, &actualValidationErrs) {
 					t.Errorf("expected ValidationErrors, got %T", err)
 					return
 				}
 
-				if len(actual) != len(expected) {
-					t.Errorf("expected %d errors, got %d", len(expected), len(actual))
+				if len(actualValidationErrs) != len(expectedValidationErrs) {
+					t.Errorf("expected %d errors, got %d", len(expectedValidationErrs), len(actualValidationErrs))
 					return
 				}
 
-				for i := range expected {
-					if actual[i].Field != expected[i].Field || actual[i].Err.Error() != expected[i].Err.Error() {
-						t.Errorf("error %d: expected %v, got %v", i, expected[i], actual[i])
+				for i := range expectedValidationErrs {
+					if actualValidationErrs[i].Field != expectedValidationErrs[i].Field ||
+						actualValidationErrs[i].Err.Error() != expectedValidationErrs[i].Err.Error() {
+						t.Errorf("error %d: expected %v, got %v", i, expectedValidationErrs[i], actualValidationErrs[i])
 					}
 				}
-
-			case error:
-				if err.Error() != expected.Error() {
-					t.Errorf("expected error %v, got %v", expected, err)
-				}
+			} else if err.Error() != tt.expectedErr.Error() {
+				t.Errorf("expected error %v, got %v", tt.expectedErr, err)
 			}
 		})
 	}
