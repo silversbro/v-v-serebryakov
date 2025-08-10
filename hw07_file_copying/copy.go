@@ -12,10 +12,10 @@ import (
 var (
 	// ErrFileGetInfo возвращается, не получилось получить информацию.
 	ErrFileGetInfo = errors.New("error file get info")
-	// ErrFileGetInfo возвращается, не получилось получить информацию.
+	// ErrCopyFileToSelf возвращается, не получилось получить информацию.
 	ErrCopyFileToSelf = errors.New("error copy file to self")
 	// ErrOpeningFile возвращается, когда читаемый файл не поддерживается.
-	ErrOpeningFile = errors.New("Error opening file")
+	ErrOpeningFile = errors.New("error opening file")
 	// ErrReadingFromFile возвращается, когда ошибка при чтении файла.
 	ErrReadingFromFile = errors.New("error reading from file")
 	// ErrOffsetExceedsFileSize возвращается, когда отступ больше чем размер файла.
@@ -27,7 +27,6 @@ var (
 )
 
 func Copy(fromPath, toPath string, offset, limit int64) error {
-
 	if fromPath == toPath {
 		return getError(ErrCopyFileToSelf, nil)
 	}
