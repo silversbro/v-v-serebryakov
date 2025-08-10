@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	// ErrEmptyFile возвращается, когда исходный файл пуст.
-	ErrEmptyFile = errors.New("source file is empty")
 	// ErrFileGetInfo возвращается, не получилось получить информацию.
 	ErrFileGetInfo = errors.New("error file get info")
 	// ErrUnsupportedFile возвращается, когда читаемый файл не поддерживается.
 	ErrUnsupportedFile = errors.New("unsupported file")
+	// ErrOpeningFile возвращается, когда читаемый файл не поддерживается.
+	ErrOpeningFile = errors.New("Error opening file")
 	// ErrReadingFromFile возвращается, когда ошибка при чтении файла.
 	ErrReadingFromFile = errors.New("error reading from file")
 	// ErrOffsetExceedsFileSize возвращается, когда отступ больше чем размер файла.
@@ -32,7 +32,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		if os.IsPermission(err) {
 			return getError(ErrReadingFromFile, err)
 		}
-		return getError(ErrUnsupportedFile, err)
+		return getError(ErrOpeningFile, err)
 	}
 
 	defer func() {
@@ -44,10 +44,6 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 	fileInfo, err := srcFile.Stat()
 	if err != nil {
 		return getError(ErrFileGetInfo, err)
-	}
-
-	if fileInfo.Size() == 0 {
-		return getError(ErrEmptyFile, nil)
 	}
 
 	if offset > fileInfo.Size() {
@@ -77,7 +73,7 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		bytesToCopy = minFinder(limit, fileInfo.Size()-offset)
 	}
 
-	buf := make([]byte, 64*1024)
+	buf := make([]byte, getBufferSize(fileInfo.Size()))
 	var totalCopied int64
 	lastProgress := -1
 
@@ -118,6 +114,19 @@ func minFinder(a, b int64) int64 {
 		return a
 	}
 	return b
+}
+
+func getBufferSize(fileSize int64) int {
+	switch {
+	case fileSize > 100*1024*1024:
+		return 10 * 1024 * 1024
+	case fileSize > 1024*1024:
+		return 512 * 1024
+	case fileSize < 1024*1024:
+		return int(fileSize)
+	default:
+		return 128 * 1024
+	}
 }
 
 func getError(errors error, errSys error) error {

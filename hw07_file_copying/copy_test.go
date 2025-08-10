@@ -46,13 +46,6 @@ func TestCopy(t *testing.T) {
 			limit:      5,
 		},
 		{
-			name:        "empty file",
-			srcContent:  "",
-			offset:      0,
-			limit:       0,
-			expectError: ErrEmptyFile,
-		},
-		{
 			name:        "offset exceeds file size",
 			srcContent:  "hello",
 			offset:      10,
@@ -180,7 +173,7 @@ func TestCopyFromNonexistentFile(t *testing.T) {
 
 	if err == nil {
 		t.Error("Expected error when copying from nonexistent file, got nil")
-	} else if !errors.Is(err, ErrUnsupportedFile) {
-		t.Errorf("Expected error %v, got %v", ErrUnsupportedFile, err)
+	} else if !errors.Is(err, ErrOpeningFile) {
+		t.Errorf("Expected error %v, got %v", ErrOpeningFile, err)
 	}
 }
