@@ -7,7 +7,6 @@ import (
 )
 
 func TestRunCmd(t *testing.T) {
-	// Создаем временную директорию для тестов
 	dir, err := os.MkdirTemp("", "envdir_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)

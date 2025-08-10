@@ -33,7 +33,6 @@ func ReadDir(dir string) (Environment, error) {
 		}
 
 		filePath := filepath.Join(dir, filename)
-		//nolint:gosec
 		file, err := os.Open(filePath)
 		if err != nil {
 			return nil, err
