@@ -19,7 +19,8 @@ func TestRunCmd(t *testing.T) {
 echo -e "FOO=($FOO)\nBAR=($BAR)\nADDED=($ADDED)"
 `
 	scriptPath := filepath.Join(dir, "echo.sh")
-	err = os.WriteFile(scriptPath, []byte(echoScript), 0600)
+	// #nosec G306
+	err = os.WriteFile(scriptPath, []byte(echoScript), 0755)
 	if err != nil {
 		t.Fatalf("Failed to create echo.sh: %v", err)
 	}
