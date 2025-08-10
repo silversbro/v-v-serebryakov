@@ -14,7 +14,7 @@ func RunCmd(cmd []string, env Environment) (returnCode int) {
 
 	for _, arg := range cmd {
 		if strings.ContainsAny(arg, "&|;<>\n") {
-			return 1 // Возвращаем ошибку, если аргумент содержит потенциально опасные символы
+			return 1
 		}
 	}
 
