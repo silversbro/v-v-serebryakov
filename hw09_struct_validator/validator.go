@@ -9,6 +9,25 @@ import (
 	"strings"
 )
 
+// Программные ошибки (ошибки реализации).
+var (
+	ErrNotStruct        = errors.New("input must be a struct or pointer to struct")
+	ErrInvalidValidator = errors.New("invalid validator syntax")
+	ErrUnsupportedType  = errors.New("unsupported field type")
+	ErrInvalidRegexp    = errors.New("invalid regexp pattern")
+	ErrInvalidIntValue  = errors.New("invalid integer value")
+	ErrInvalidLenValue  = errors.New("invalid length value")
+)
+
+// Ошибки валидации (ошибки входных данных).
+var (
+	ErrValidationLength = errors.New("validation failed: length")
+	ErrValidationRegexp = errors.New("validation failed: regexp")
+	ErrValidationIn     = errors.New("validation failed: in")
+	ErrValidationMin    = errors.New("validation failed: min")
+	ErrValidationMax    = errors.New("validation failed: max")
+)
+
 type ValidationError struct {
 	Field string
 	Err   error
@@ -27,6 +46,19 @@ func (v ValidationErrors) Error() string {
 	return sb.String()
 }
 
+func (v ValidationErrors) Is(target error) bool {
+	if target == nil {
+		return false
+	}
+
+	for _, err := range v {
+		if errors.Is(err.Err, target) {
+			return true
+		}
+	}
+	return false
+}
+
 func Validate(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
@@ -34,7 +66,7 @@ func Validate(v interface{}) error {
 	}
 
 	if val.Kind() != reflect.Struct {
-		return errors.New("input must be a struct or pointer to struct")
+		return ErrNotStruct
 	}
 
 	var validationErrors ValidationErrors
@@ -53,7 +85,6 @@ func Validate(v interface{}) error {
 			continue
 		}
 
-		// Handle slices
 		if fieldValue.Kind() == reflect.Slice {
 			for j := 0; j < fieldValue.Len(); j++ {
 				element := fieldValue.Index(j)
@@ -84,7 +115,7 @@ func validateField(fieldName string, fieldValue reflect.Value, validateTag strin
 		if len(parts) != 2 {
 			validationErrors = append(validationErrors, ValidationError{
 				Field: fieldName,
-				Err:   fmt.Errorf("invalid validator syntax: %s", validator),
+				Err:   fmt.Errorf("%w: %s", ErrInvalidValidator, validator),
 			})
 			continue
 		}
@@ -100,7 +131,7 @@ func validateField(fieldName string, fieldValue reflect.Value, validateTag strin
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			err = validateInt(fieldValue.Int(), validatorName, validatorValue)
 		default:
-			err = fmt.Errorf("unsupported field type: %s", fieldValue.Kind())
+			err = fmt.Errorf("%w: %s", ErrUnsupportedType, fieldValue.Kind())
 		}
 
 		if err != nil {
@@ -119,18 +150,18 @@ func validateString(value, validator, arg string) error {
 	case "len":
 		expectedLen, err := strconv.Atoi(arg)
 		if err != nil {
-			return fmt.Errorf("invalid length value: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidLenValue, arg)
 		}
 		if len(value) != expectedLen {
-			return fmt.Errorf("length must be %d", expectedLen)
+			return fmt.Errorf("%w: must be %d", ErrValidationLength, expectedLen)
 		}
 	case "regexp":
 		matched, err := regexp.MatchString(arg, value)
 		if err != nil {
-			return fmt.Errorf("invalid regexp: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidRegexp, arg)
 		}
 		if !matched {
-			return fmt.Errorf("must match regexp %s", arg)
+			return fmt.Errorf("%w: must match %s", ErrValidationRegexp, arg)
 		}
 	case "in":
 		options := strings.Split(arg, ",")
@@ -142,7 +173,7 @@ func validateString(value, validator, arg string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("must be one of %v", options)
+			return fmt.Errorf("%w: must be one of %v", ErrValidationIn, options)
 		}
 	default:
 		return fmt.Errorf("unknown validator %s for string", validator)
@@ -155,18 +186,18 @@ func validateInt(value int64, validator, arg string) error {
 	case "min":
 		minVal, err := strconv.ParseInt(arg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("invalid min value: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidIntValue, arg)
 		}
 		if value < minVal {
-			return fmt.Errorf("must be >= %d", minVal)
+			return fmt.Errorf("%w: must be >= %d", ErrValidationMin, minVal)
 		}
 	case "max":
 		maxVal, err := strconv.ParseInt(arg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("invalid max value: %s", arg)
+			return fmt.Errorf("%w: %s", ErrInvalidIntValue, arg)
 		}
 		if value > maxVal {
-			return fmt.Errorf("must be <= %d", maxVal)
+			return fmt.Errorf("%w: must be <= %d", ErrValidationMax, maxVal)
 		}
 	case "in":
 		options := strings.Split(arg, ",")
@@ -174,7 +205,7 @@ func validateInt(value int64, validator, arg string) error {
 		for _, opt := range options {
 			optInt, err := strconv.ParseInt(opt, 10, 64)
 			if err != nil {
-				return fmt.Errorf("invalid in value: %s", opt)
+				return fmt.Errorf("%w: %s", ErrInvalidIntValue, opt)
 			}
 			if value == optInt {
 				found = true
@@ -182,7 +213,7 @@ func validateInt(value int64, validator, arg string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("must be one of %v", options)
+			return fmt.Errorf("%w: must be one of %v", ErrValidationIn, options)
 		}
 	default:
 		return fmt.Errorf("unknown validator %s for int", validator)
