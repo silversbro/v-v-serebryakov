@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -xeuo pipefail
 
+# Сборка
 go build -o go-cp
 
 ./go-cp -from testdata/input.txt -to out.txt
@@ -20,6 +21,9 @@ cmp out.txt testdata/out_offset100_limit1000.txt
 
 ./go-cp -from testdata/input.txt -to out.txt -offset 6000 -limit 1000
 cmp out.txt testdata/out_offset6000_limit1000.txt
+
+./go-cp -from testdata/input10000_rows.txt -to out.txt -offset 1000 -limit 0
+cmp out.txt testdata/out_offset1000_limit10000.txt
 
 rm -f go-cp out.txt
 echo "PASS"
