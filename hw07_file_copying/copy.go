@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
-	"time"
 )
 
 var (
@@ -26,19 +26,20 @@ var (
 	ErrWriteDestinationFile = errors.New("error writing to destination")
 )
 
+type FileInfo = fs.FileInfo
+
 func Copy(fromPath, toPath string, offset, limit int64) error {
 	if fromPath == toPath {
 		return getError(ErrCopyFileToSelf, nil)
 	}
 
-	srcFile, err := os.Open(fromPath) // #nosec G304
+	srcFile, err := os.Open(fromPath)
 	if err != nil {
 		if os.IsPermission(err) {
 			return getError(ErrReadingFromFile, err)
 		}
 		return getError(ErrOpeningFile, err)
 	}
-
 	defer func() {
 		if err := srcFile.Close(); err != nil {
 			log.Print("Error closing file: ", err)
@@ -50,34 +51,44 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 		return getError(ErrFileGetInfo, err)
 	}
 
+	// Проверяем, является ли файл устройством или специальным файлом
+	isSpecial := (fileInfo.Mode()&os.ModeDevice != 0) ||
+		(fileInfo.Mode()&os.ModeNamedPipe != 0) ||
+		(fileInfo.Mode()&os.ModeSocket != 0) ||
+		(fileInfo.Mode()&os.ModeCharDevice != 0)
+
+	if isSpecial {
+		return copySpecialFile(srcFile, toPath, offset, limit)
+	}
+	return copyRegularFile(srcFile, fileInfo, toPath, offset, limit)
+}
+
+func copyRegularFile(srcFile *os.File, fileInfo os.FileInfo, toPath string, offset, limit int64) error {
 	if offset > fileInfo.Size() {
 		return getError(ErrOffsetExceedsFileSize, nil)
 	}
 
-	_, err = srcFile.Seek(offset, io.SeekStart)
-	if err != nil {
+	if _, err := srcFile.Seek(offset, io.SeekStart); err != nil {
 		return getError(ErrReadingFromFile, err)
 	}
 
-	destFile, err := os.OpenFile(toPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600) // #nosec G304
+	destFile, err := os.Create(toPath)
 	if err != nil {
 		return getError(ErrCreateDestinationFile, err)
 	}
-
 	defer func() {
 		if err := destFile.Close(); err != nil {
-			log.Print("Error closing file destination: ", err)
+			log.Print("Error closing file: ", err)
 		}
 	}()
 
-	var bytesToCopy int64
-	if limit == 0 {
-		bytesToCopy = fileInfo.Size() - offset
-	} else {
-		bytesToCopy = minFinder(limit, fileInfo.Size()-offset)
+	bytesToCopy := fileInfo.Size() - offset
+	if limit > 0 && limit < bytesToCopy {
+		bytesToCopy = limit
 	}
 
-	buf := make([]byte, getBufferSize(fileInfo.Size()))
+	bufSize := getBufferSize(bytesToCopy)
+	buf := make([]byte, bufSize)
 	var totalCopied int64
 	lastProgress := -1
 
@@ -101,23 +112,74 @@ func Copy(fromPath, toPath string, offset, limit int64) error {
 
 		totalCopied += int64(n)
 		progress := int(float64(totalCopied) / float64(bytesToCopy) * 100)
-
 		if progress != lastProgress {
 			fmt.Printf("\rProgress: %d%%", progress)
 			lastProgress = progress
 		}
-		time.Sleep(10 * time.Millisecond)
 	}
 
 	fmt.Println("\nCopy completed successfully!")
 	return nil
 }
 
-func minFinder(a, b int64) int64 {
-	if a < b {
-		return a
+func copySpecialFile(srcFile *os.File, toPath string, offset, limit int64) error {
+	if offset > 0 {
+		if _, err := srcFile.Seek(offset, io.SeekStart); err != nil {
+			return getError(ErrReadingFromFile, err)
+		}
 	}
-	return b
+
+	destFile, err := os.Create(toPath)
+	if err != nil {
+		return getError(ErrCreateDestinationFile, err)
+	}
+	defer func() {
+		if err := destFile.Close(); err != nil {
+			log.Print("Error closing file: ", err)
+		}
+	}()
+
+	const bufSize = 32 * 1024 // Фиксированный размер буфера
+	buf := make([]byte, bufSize)
+	var totalCopied int64
+
+	for {
+		if limit > 0 && totalCopied >= limit {
+			break
+		}
+
+		readSize := bufSize
+		if limit > 0 {
+			remaining := limit - totalCopied
+			if remaining < int64(bufSize) {
+				readSize = int(remaining)
+			}
+		}
+
+		n, err := io.ReadFull(srcFile, buf[:readSize])
+		if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
+			return getError(ErrReadingFromFile, err)
+		}
+
+		if n == 0 {
+			break
+		}
+
+		if _, err := destFile.Write(buf[:n]); err != nil {
+			return getError(ErrWriteDestinationFile, err)
+		}
+
+		totalCopied += int64(n)
+		if limit > 0 {
+			progress := int(float64(totalCopied) / float64(limit) * 100)
+			fmt.Printf("\rProgress: %d%%", progress)
+		} else {
+			fmt.Printf("\rCopied: %d bytes", totalCopied)
+		}
+	}
+
+	fmt.Println("\nCopy completed successfully!")
+	return nil
 }
 
 func getBufferSize(fileSize int64) int {

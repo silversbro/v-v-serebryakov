@@ -56,8 +56,7 @@ func TestCopy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Создаем исходный файл
-			srcFile, err := os.CreateTemp(testDir, "src_*.txt")
+			srcFile, err := os.CreateTemp(testDir, "test_file.txt")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
@@ -68,8 +67,7 @@ func TestCopy(t *testing.T) {
 			}
 			srcFile.Close()
 
-			// Создаем файл назначения
-			dstFile, err := os.CreateTemp(testDir, "dst_*.txt")
+			dstFile, err := os.CreateTemp(testDir, "test_file.txt")
 			if err != nil {
 				t.Fatalf("Failed to create temp file: %v", err)
 			}
@@ -132,8 +130,7 @@ func TestCopyToNonexistentDir(t *testing.T) {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
 
-	// Создаем исходный файл
-	srcFile, err := os.CreateTemp(testDir, "src_*.txt")
+	srcFile, err := os.CreateTemp(testDir, "test_file.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -159,8 +156,7 @@ func TestCopyFromNonexistentFile(t *testing.T) {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
 
-	// Создаем файл назначения
-	dstFile, err := os.CreateTemp(testDir, "dst_*.txt")
+	dstFile, err := os.CreateTemp(testDir, "test_file.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -175,5 +171,53 @@ func TestCopyFromNonexistentFile(t *testing.T) {
 		t.Error("Expected error when copying from nonexistent file, got nil")
 	} else if !errors.Is(err, ErrOpeningFile) {
 		t.Errorf("Expected error %v, got %v", ErrOpeningFile, err)
+	}
+}
+
+func TestCopyFromRandom(t *testing.T) {
+	// Проверяем, существует ли /dev/urandom и доступен ли для чтения
+	if _, err := os.Stat("/dev/urandom"); os.IsNotExist(err) {
+		t.Skip("/dev/urandom not available, skipping test")
+	}
+
+	testFile, err := os.Open("/dev/urandom")
+	if err != nil {
+		t.Skipf("Cannot open /dev/urandom: %v, skipping test", err)
+	}
+	testFile.Close()
+
+	dstFile, err := os.CreateTemp("", "test_file.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	dstPath := dstFile.Name()
+	dstFile.Close()
+	defer os.Remove(dstPath)
+
+	// Копируем небольшой объем данных для теста (512 байт)
+	const copySize = 512
+	err = Copy("/dev/urandom", dstPath, 0, copySize)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// Проверяем размер файла
+	fileInfo, err := os.Stat(dstPath)
+	if err != nil {
+		t.Fatalf("Failed to stat dst file: %v", err)
+	}
+
+	if fileInfo.Size() != copySize {
+		t.Errorf("Expected size %d bytes, got %d bytes", copySize, fileInfo.Size())
+	}
+
+	// Проверяем, что файл не пустой
+	data, err := os.ReadFile(dstPath)
+	if err != nil {
+		t.Fatalf("Failed to read dst file: %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Copied file is empty")
 	}
 }
