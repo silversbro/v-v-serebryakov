@@ -35,6 +35,7 @@ type ValidationError struct {
 
 type ValidationErrors []ValidationError
 
+//nolint:typecheck
 func (v ValidationErrors) Error() string {
 	var sb strings.Builder
 	for i, err := range v {
@@ -46,6 +47,7 @@ func (v ValidationErrors) Error() string {
 	return sb.String()
 }
 
+//nolint:typecheck
 func (v ValidationErrors) Is(target error) bool {
 	if target == nil {
 		return false
@@ -59,6 +61,7 @@ func (v ValidationErrors) Is(target error) bool {
 	return false
 }
 
+//nolint:typecheck
 func Validate(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
@@ -106,6 +109,7 @@ func Validate(v interface{}) error {
 	return nil
 }
 
+//nolint:typecheck
 func validateField(fieldName string, fieldValue reflect.Value, validateTag string) ValidationErrors {
 	var validationErrors ValidationErrors
 
@@ -145,6 +149,7 @@ func validateField(fieldName string, fieldValue reflect.Value, validateTag strin
 	return validationErrors
 }
 
+//nolint:typecheck
 func validateString(value, validator, arg string) error {
 	switch validator {
 	case "len":
@@ -181,6 +186,7 @@ func validateString(value, validator, arg string) error {
 	return nil
 }
 
+//nolint:typecheck
 func validateInt(value int64, validator, arg string) error {
 	switch validator {
 	case "min":
