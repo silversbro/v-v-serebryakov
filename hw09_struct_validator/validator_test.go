@@ -2,10 +2,11 @@ package hw09structvalidator
 
 import (
 	"errors"
-	"testing"
 	"github.com/stretchr/testify/require"
+	"testing"
 )
 
+//nolint:funlen
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name         string
