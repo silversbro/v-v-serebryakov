@@ -124,7 +124,7 @@ func validateField(fieldName string, fieldValue reflect.Value, validateTag strin
 		validatorValue := parts[1]
 
 		var err error
-		//nolint:exhaustive
+		//nolint:exhaustive,nolintlint
 		switch fieldValue.Kind() {
 		case reflect.String:
 			err = validateString(fieldValue.String(), validatorName, validatorValue)

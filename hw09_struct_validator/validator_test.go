@@ -2,8 +2,9 @@ package hw09structvalidator
 
 import (
 	"errors"
-	"github.com/stretchr/testify/require"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 //nolint:funlen
