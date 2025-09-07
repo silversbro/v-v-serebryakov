@@ -59,7 +59,6 @@ func (v ValidationErrors) Is(target error) bool {
 	return false
 }
 
-//nolint:typecheck
 func Validate(v interface{}) error {
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
@@ -107,7 +106,6 @@ func Validate(v interface{}) error {
 	return nil
 }
 
-//nolint:typecheck
 func validateField(fieldName string, fieldValue reflect.Value, validateTag string) ValidationErrors {
 	var validationErrors ValidationErrors
 
