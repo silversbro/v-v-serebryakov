@@ -110,7 +110,8 @@ func validateField(
 	fieldName string,
 	fieldValue reflect.Value,
 	validateTag string,
-	validationErrors *ValidationErrors) error {
+	validationErrors *ValidationErrors,
+) error {
 	validators := strings.Split(validateTag, "|")
 	for _, validator := range validators {
 		parts := strings.SplitN(validator, ":", 2)
