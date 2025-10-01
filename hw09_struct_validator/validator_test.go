@@ -354,6 +354,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field string `validate:"len"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorIs(t, err, ErrInvalidValidator)
 			},
 		},
@@ -363,6 +364,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field float64 `validate:"min:1.5"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorIs(t, err, ErrUnsupportedType)
 			},
 		},
@@ -372,6 +374,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field string `validate:"regexp:[invalid"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorIs(t, err, ErrInvalidRegexp)
 			},
 		},
@@ -381,6 +384,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field int `validate:"min:not-a-number"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorIs(t, err, ErrInvalidIntValue)
 			},
 		},
@@ -390,6 +394,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field string `validate:"len:not-a-number"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorIs(t, err, ErrInvalidLenValue)
 			},
 		},
@@ -399,6 +404,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field string `validate:"unknown:value"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorContains(t, err, "unknown validator unknown for string")
 			},
 		},
@@ -408,6 +414,7 @@ func TestInvalidValidators(t *testing.T) {
 				Field int `validate:"unknown:value"`
 			}{},
 			check: func(t *testing.T, err error) {
+				t.Helper()
 				require.ErrorContains(t, err, "unknown validator unknown for int")
 			},
 		},
