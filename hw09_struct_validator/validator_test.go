@@ -90,6 +90,7 @@ func TestValidateString(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.Len(t, valErr, 1)
@@ -106,6 +107,7 @@ func TestValidateString(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.ErrorIs(t, valErr[0].Err, ErrValidationRegexp)
@@ -121,6 +123,7 @@ func TestValidateString(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.ErrorIs(t, valErr[0].Err, ErrValidationIn)
@@ -136,6 +139,7 @@ func TestValidateString(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.Greater(t, len(valErr), 1)
@@ -189,6 +193,7 @@ func TestValidateInt(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.ErrorIs(t, valErr[0].Err, ErrValidationMin)
@@ -203,6 +208,7 @@ func TestValidateInt(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.ErrorIs(t, valErr[0].Err, ErrValidationMax)
@@ -217,6 +223,7 @@ func TestValidateInt(t *testing.T) {
 			},
 			expectedError: true,
 			checkError: func(t *testing.T, err error) {
+				t.Helper()
 				var valErr ValidationErrors
 				require.ErrorAs(t, err, &valErr)
 				require.ErrorIs(t, valErr[0].Err, ErrValidationIn)
