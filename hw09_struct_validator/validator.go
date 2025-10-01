@@ -76,7 +76,7 @@ func Validate(v interface{}) error {
 		field := typ.Field(i)
 		fieldValue := val.Field(i)
 
-		if field.PkgPath != "" {
+		if !field.IsExported() {
 			continue
 		}
 
@@ -88,15 +88,15 @@ func Validate(v interface{}) error {
 		if fieldValue.Kind() == reflect.Slice {
 			for j := 0; j < fieldValue.Len(); j++ {
 				element := fieldValue.Index(j)
-				if errs := validateField(fmt.Sprintf("%s[%d]", field.Name, j), element, validateTag); errs != nil {
-					validationErrors = append(validationErrors, errs...)
+				if err := validateField(fmt.Sprintf("%s[%d]", field.Name, j), element, validateTag, &validationErrors); err != nil {
+					return err
 				}
 			}
 			continue
 		}
 
-		if errs := validateField(field.Name, fieldValue, validateTag); errs != nil {
-			validationErrors = append(validationErrors, errs...)
+		if err := validateField(field.Name, fieldValue, validateTag, &validationErrors); err != nil {
+			return err
 		}
 	}
 
@@ -106,43 +106,36 @@ func Validate(v interface{}) error {
 	return nil
 }
 
-func validateField(fieldName string, fieldValue reflect.Value, validateTag string) ValidationErrors {
-	var validationErrors ValidationErrors
-
+func validateField(fieldName string, fieldValue reflect.Value, validateTag string, validationErrors *ValidationErrors) error {
 	validators := strings.Split(validateTag, "|")
 	for _, validator := range validators {
 		parts := strings.SplitN(validator, ":", 2)
 		if len(parts) != 2 {
-			validationErrors = append(validationErrors, ValidationError{
-				Field: fieldName,
-				Err:   fmt.Errorf("%w: %s", ErrInvalidValidator, validator),
-			})
-			continue
+			return fmt.Errorf("%w: %s", ErrInvalidValidator, validator)
 		}
 
 		validatorName := parts[0]
 		validatorValue := parts[1]
 
 		var err error
-		//nolint:exhaustive
 		switch fieldValue.Kind() {
 		case reflect.String:
 			err = validateString(fieldValue.String(), validatorName, validatorValue)
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			err = validateInt(fieldValue.Int(), validatorName, validatorValue)
 		default:
-			err = fmt.Errorf("%w: %s", ErrUnsupportedType, fieldValue.Kind())
+			return fmt.Errorf("%w: %s", ErrUnsupportedType, fieldValue.Kind())
 		}
 
 		if err != nil {
-			validationErrors = append(validationErrors, ValidationError{
+			*validationErrors = append(*validationErrors, ValidationError{
 				Field: fieldName,
 				Err:   err,
 			})
 		}
 	}
 
-	return validationErrors
+	return nil
 }
 
 func validateString(value, validator, arg string) error {
@@ -153,15 +146,15 @@ func validateString(value, validator, arg string) error {
 			return fmt.Errorf("%w: %s", ErrInvalidLenValue, arg)
 		}
 		if len(value) != expectedLen {
-			return fmt.Errorf("%w: must be %d", ErrValidationLength, expectedLen)
+			return ErrValidationLength
 		}
 	case "regexp":
-		matched, err := regexp.MatchString(arg, value)
+		re, err := regexp.Compile(arg)
 		if err != nil {
 			return fmt.Errorf("%w: %s", ErrInvalidRegexp, arg)
 		}
-		if !matched {
-			return fmt.Errorf("%w: must match %s", ErrValidationRegexp, arg)
+		if !re.MatchString(value) {
+			return ErrValidationRegexp
 		}
 	case "in":
 		options := strings.Split(arg, ",")
@@ -173,7 +166,7 @@ func validateString(value, validator, arg string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("%w: must be one of %v", ErrValidationIn, options)
+			return ErrValidationIn
 		}
 	default:
 		return fmt.Errorf("unknown validator %s for string", validator)
@@ -189,7 +182,7 @@ func validateInt(value int64, validator, arg string) error {
 			return fmt.Errorf("%w: %s", ErrInvalidIntValue, arg)
 		}
 		if value < minVal {
-			return fmt.Errorf("%w: must be >= %d", ErrValidationMin, minVal)
+			return ErrValidationMin
 		}
 	case "max":
 		maxVal, err := strconv.ParseInt(arg, 10, 64)
@@ -197,7 +190,7 @@ func validateInt(value int64, validator, arg string) error {
 			return fmt.Errorf("%w: %s", ErrInvalidIntValue, arg)
 		}
 		if value > maxVal {
-			return fmt.Errorf("%w: must be <= %d", ErrValidationMax, maxVal)
+			return ErrValidationMax
 		}
 	case "in":
 		options := strings.Split(arg, ",")
@@ -213,7 +206,7 @@ func validateInt(value int64, validator, arg string) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("%w: must be one of %v", ErrValidationIn, options)
+			return ErrValidationIn
 		}
 	default:
 		return fmt.Errorf("unknown validator %s for int", validator)
