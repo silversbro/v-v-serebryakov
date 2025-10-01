@@ -106,7 +106,11 @@ func Validate(v interface{}) error {
 	return nil
 }
 
-func validateField(fieldName string, fieldValue reflect.Value, validateTag string, validationErrors *ValidationErrors) error {
+func validateField(
+	fieldName string,
+	fieldValue reflect.Value,
+	validateTag string,
+	validationErrors *ValidationErrors) error {
 	validators := strings.Split(validateTag, "|")
 	for _, validator := range validators {
 		parts := strings.SplitN(validator, ":", 2)
@@ -118,6 +122,7 @@ func validateField(fieldName string, fieldValue reflect.Value, validateTag strin
 		validatorValue := parts[1]
 
 		var err error
+		//nolint:exhaustive
 		switch fieldValue.Kind() {
 		case reflect.String:
 			err = validateString(fieldValue.String(), validatorName, validatorValue)
