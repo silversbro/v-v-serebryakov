@@ -418,7 +418,7 @@ func TestInvalidValidators(t *testing.T) {
 func TestPrivateFields(t *testing.T) {
 	type PrivateTest struct {
 		PublicField  string `validate:"len:5"`
-		privateField string `validate:"len:3"` // should be ignored
+		privateField string `validate:"len:3"`
 	}
 
 	testStruct := PrivateTest{
@@ -456,10 +456,10 @@ func TestComplexValidators(t *testing.T) {
 		{
 			name: "multiple validator failures",
 			profile: UserProfile{
-				Username:   "ADMIN", // uppercase fails regexp
-				Age:        15,      // too young
-				PIN:        "12A4",  // contains letter
-				MultiCheck: "xyz",   // not in list
+				Username:   "ADMIN",
+				Age:        15,
+				PIN:        "12A4",
+				MultiCheck: "xyz",
 			},
 			expectedError: true,
 		},
