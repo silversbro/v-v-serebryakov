@@ -8,7 +8,6 @@ import (
 )
 
 func TestReadDir(t *testing.T) {
-	// Создаем временную директорию для тестов
 	dir, err := os.MkdirTemp("", "envdir_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -32,7 +31,9 @@ func TestReadDir(t *testing.T) {
 		if tt.filename == "INVALID=NAME" {
 			continue
 		}
-		err := os.WriteFile(filepath.Join(dir, tt.filename), []byte(tt.content), 0600)
+
+		// #nosec G306
+		err := os.WriteFile(filepath.Join(dir, tt.filename), []byte(tt.content), 0o644)
 		if err != nil {
 			t.Fatalf("Failed to create file %s: %v", tt.filename, err)
 		}

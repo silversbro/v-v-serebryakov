@@ -7,7 +7,6 @@ import (
 )
 
 func TestRunCmd(t *testing.T) {
-	// Создаем временную директорию для тестов
 	dir, err := os.MkdirTemp("", "envdir_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -19,15 +18,16 @@ func TestRunCmd(t *testing.T) {
 echo -e "FOO=($FOO)\nBAR=($BAR)\nADDED=($ADDED)"
 `
 	scriptPath := filepath.Join(dir, "echo.sh")
-	err = os.WriteFile(scriptPath, []byte(echoScript), 0600)
+	// #nosec G306
+	err = os.WriteFile(scriptPath, []byte(echoScript), 0o755)
 	if err != nil {
 		t.Fatalf("Failed to create echo.sh: %v", err)
 	}
 
 	// Создаем файлы окружения
-	os.WriteFile(filepath.Join(dir, "FOO"), []byte("foovalue"), 0644)
-	os.WriteFile(filepath.Join(dir, "BAR"), []byte("barvalue"), 0644)
-	os.WriteFile(filepath.Join(dir, "EMPTY"), []byte(""), 0644)
+	os.WriteFile(filepath.Join(dir, "FOO"), []byte("foovalue"), 0o644)
+	os.WriteFile(filepath.Join(dir, "BAR"), []byte("barvalue"), 0o644)
+	os.WriteFile(filepath.Join(dir, "EMPTY"), []byte(""), 0o644)
 
 	// Устанавливаем начальные переменные окружения
 	os.Setenv("ADDED", "original")
