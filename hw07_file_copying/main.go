@@ -2,6 +2,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 )
 
 var (
@@ -18,5 +20,30 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Place your code here.
+
+	if err := validateArgs(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := Copy(from, to, offset, limit); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func validateArgs() error {
+	if from == "" || to == "" {
+		return fmt.Errorf("both 'from' and 'to' paths must be specified")
+	}
+
+	if offset < 0 {
+		return fmt.Errorf("offset cannot be negative")
+	}
+
+	if limit < 0 {
+		return fmt.Errorf("limit cannot be negative")
+	}
+
+	return nil
 }

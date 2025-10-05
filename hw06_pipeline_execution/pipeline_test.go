@@ -95,6 +95,31 @@ func TestPipeline(t *testing.T) {
 	})
 }
 
+func TestPipelineEmpty(t *testing.T) {
+	stages := []Stage{}
+
+	t.Run("simple case empty", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := ExecutePipeline(in, nil, stages...)
+
+		var expectedData []int
+		for val := range result {
+			expectedData = append(expectedData, val.(int))
+		}
+
+		require.Equal(t, expectedData, data)
+	})
+}
+
 func TestAllStageStop(t *testing.T) {
 	if !isFullTesting {
 		return
@@ -150,6 +175,5 @@ func TestAllStageStop(t *testing.T) {
 		wg.Wait()
 
 		require.Len(t, result, 0)
-
 	})
 }
