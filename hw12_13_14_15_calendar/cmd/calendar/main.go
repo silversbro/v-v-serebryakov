@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"flag"
+	"github.com/silversbro/v-v-serebryakov/hw12_13_14_15_calendar/cmd/calendar/command"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	"github.com/silversbro/v-v-serebryakov/hw12_13_14_15_calendar/internal/app"
+	"github.com/silversbro/v-v-serebryakov/hw12_13_14_15_calendar/internal/logger"
+	internalhttp "github.com/silversbro/v-v-serebryakov/hw12_13_14_15_calendar/internal/server/http"
+	memorystorage "github.com/silversbro/v-v-serebryakov/hw12_13_14_15_calendar/internal/storage/memory"
 )
 
 var configFile string
@@ -24,7 +25,7 @@ func main() {
 	flag.Parse()
 
 	if flag.Arg(0) == "version" {
-		printVersion()
+		command.printVersion()
 		return
 	}
 

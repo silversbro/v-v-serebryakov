@@ -1,5 +1,42 @@
 [logger]
+driver = "stdout"
+type = "daily"
 level = "INFO"
 
-# TODO
-# ...
+[database]
+host = "localhost"
+port = 5432
+username = "calendar_user"
+password = "password"
+dbname = "calendar"
+sslmode = "disable"
+
+[cache]
+driver = "redis"
+address = "localhost:6379"
+
+[queue]
+driver = "rabbitmq"
+address = "amqp://localhost:5672/"
+
+[redis]
+host = "localhost"
+port = 6379
+password = ""
+db = 0
+
+[rabbitmq]
+host = "localhost"
+port = 5672
+username = "guest"
+password = "guest"
+vhost = "/"
+
+[service]
+name = "calendar"
+environment = "development"
+debug = true
+
+[http]
+host = "0.0.0.0"
+port = 8080
