@@ -20,6 +20,7 @@ type telnetClient struct {
 	in      io.ReadCloser
 	out     io.Writer
 	conn    net.Conn
+	scanner *bufio.Scanner
 }
 
 func NewTelnetClient(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) TelnetClient {
@@ -37,6 +38,7 @@ func (t *telnetClient) Connect() error {
 		return err
 	}
 	t.conn = conn
+	t.scanner = bufio.NewScanner(conn)
 	return nil
 }
 
@@ -48,27 +50,28 @@ func (t *telnetClient) Close() error {
 }
 
 func (t *telnetClient) Send() error {
-	reader := bufio.NewReader(t.in)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		if _, err := t.conn.Write([]byte(line)); err != nil {
+	scanner := bufio.NewScanner(t.in)
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		data = append(data, '\n')
+		if _, err := t.conn.Write(data); err != nil {
 			return err
 		}
 	}
+	return scanner.Err()
 }
 
 func (t *telnetClient) Receive() error {
-	reader := bufio.NewReader(t.conn)
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			return err
-		}
-		if _, err := t.out.Write([]byte(line)); err != nil {
+	if t.scanner == nil {
+		return nil
+	}
+
+	for t.scanner.Scan() {
+		data := t.scanner.Bytes()
+		data = append(data, '\n')
+		if _, err := t.out.Write(data); err != nil {
 			return err
 		}
 	}
+	return t.scanner.Err()
 }

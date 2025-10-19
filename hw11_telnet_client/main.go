@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"os/signal"
@@ -18,7 +18,7 @@ func main() {
 
 	args := flag.Args()
 	if len(args) != 2 {
-		fmt.Println(os.Stderr, "Usage: %s [--timeout=10s] host port\n", os.Args[0])
+		log.Printf("Usage: %s [--timeout=10s] host port\n", os.Args[0])
 		os.Exit(1)
 	}
 
@@ -28,65 +28,54 @@ func main() {
 	client := NewTelnetClient(address, timeout, os.Stdin, os.Stdout)
 
 	if err := client.Connect(); err != nil {
-		fmt.Println("Error connecting to %s: %v\n", address, err)
+		log.Printf("Error connecting to %s: %v\n", address, err)
 		os.Exit(1)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Printf("Error closing client: %v", err)
+		}
+	}()
 
-	fmt.Fprintf(os.Stderr, "...Connected to %s\n", address)
+	log.Printf("...Connected to %s\n", address)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
-	done := make(chan struct{})
-	go runClient(client, done)
-
-	select {
-	case <-sigCh:
-		fmt.Println(os.Stderr, "...SIGINT received, closing connection\n")
-		return
-	case <-done:
-		fmt.Println(os.Stderr, " closing connection\n")
-		return
-	}
-}
-
-func runClient(client TelnetClient, done chan struct{}) {
-	defer close(done)
-
-	sendErr := make(chan error, 1)
-	receiveErr := make(chan error, 1)
+	done := make(chan struct{}, 2) // буфер для 2 горутин
 
 	go func() {
 		if err := client.Send(); err != nil {
-			sendErr <- err
+			handleError(err, "send")
 		}
+		done <- struct{}{}
 	}()
 
 	go func() {
 		if err := client.Receive(); err != nil {
-			receiveErr <- err
+			handleError(err, "receive")
 		}
+		done <- struct{}{}
 	}()
 
 	select {
-	case err := <-sendErr:
-		handleError(err, "send")
-	case err := <-receiveErr:
-		handleError(err, "receive")
+	case <-sigCh:
+		log.Println("...SIGINT received, closing connection")
+	case <-done:
+		log.Println("...Connection closed")
 	}
 }
 
 func handleError(err error, operation string) {
 	if err == io.EOF {
 		if operation == "send" {
-			fmt.Println(os.Stderr, "...EOF\n")
+			log.Println("...EOF")
 		} else {
-			fmt.Println(os.Stderr, "...Connection was closed by peer\n")
+			log.Println("...Connection was closed by peer")
 		}
-	} else if _, ok := err.(*net.OpError); ok {
-		fmt.Println(os.Stderr, "...Connection was closed by peer\n")
+	} else if opErr, ok := err.(*net.OpError); ok && opErr.Op == "read" {
+		log.Println("...Connection was closed by peer")
 	} else {
-		fmt.Println(os.Stderr, "Error in %s: %v\n", operation, err)
+		log.Printf("Error in %s: %v", operation, err)
 	}
 }
