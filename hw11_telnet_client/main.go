@@ -68,18 +68,21 @@ func main() {
 }
 
 func handleError(err error, operation string) {
-	if errors.Is(err, io.EOF) {
+	switch {
+	case errors.Is(err, io.EOF):
 		if operation == "send" {
 			log.Println("...EOF")
 		} else {
 			log.Println("...Connection was closed by peer")
 		}
-	} else {
-		var opErr *net.OpError
-		if errors.As(err, &opErr) && opErr.Op == "read" {
-			log.Println("...Connection was closed by peer")
-		} else {
-			log.Printf("Error in %s: %v", operation, err)
-		}
+	case isNetOpReadError(err):
+		log.Println("...Connection was closed by peer")
+	default:
+		log.Printf("Error in %s: %v", operation, err)
 	}
+}
+
+func isNetOpReadError(err error) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "read"
 }
