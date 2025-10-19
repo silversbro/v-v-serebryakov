@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"log"
@@ -67,15 +68,18 @@ func main() {
 }
 
 func handleError(err error, operation string) {
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		if operation == "send" {
 			log.Println("...EOF")
 		} else {
 			log.Println("...Connection was closed by peer")
 		}
-	} else if opErr, ok := err.(*net.OpError); ok && opErr.Op == "read" {
-		log.Println("...Connection was closed by peer")
 	} else {
-		log.Printf("Error in %s: %v", operation, err)
+		var opErr *net.OpError
+		if errors.As(err, &opErr) && opErr.Op == "read" {
+			log.Println("...Connection was closed by peer")
+		} else {
+			log.Printf("Error in %s: %v", operation, err)
+		}
 	}
 }
